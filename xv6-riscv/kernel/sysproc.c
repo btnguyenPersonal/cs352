@@ -95,3 +95,16 @@ sys_uptime(void)
   release(&tickslock);
   return xticks;
 }
+
+// return how many processes are running on the system
+uint64
+sys_pcount(void)
+{
+  uint num_unused = 0;
+  for (int i = 0; i < NPROC; i++) {
+    if (proc[i].state != UNUSED) {
+      num_unused++;
+    }
+  }
+  return num_unused;
+}
