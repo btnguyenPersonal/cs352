@@ -53,6 +53,19 @@ procinit(void)
   for(p = proc; p < &proc[NPROC]; p++) {
       initlock(&p->lock, "proc");
       p->kstack = KSTACK((int) (p - proc));
+      p->nice = 10;
+  }
+}
+
+// changes the nice value
+void 
+change_nice(int n, int pid)
+{
+  struct proc *p;
+  for(p = proc; p < &proc[NPROC]; p++) {
+    if (pid == p->pid) {
+      p->nice = n;
+    }
   }
 }
 

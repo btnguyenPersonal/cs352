@@ -108,3 +108,10 @@ sys_pcount(void)
   }
   return num_unused;
 }
+
+// return the nice value
+uint64
+sys_nice(void)
+{
+  return myproc()->nice;
+}
