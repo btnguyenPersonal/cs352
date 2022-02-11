@@ -52,8 +52,7 @@ procinit(void)
   initlock(&wait_lock, "wait_lock");
   for(p = proc; p < &proc[NPROC]; p++) {
       initlock(&p->lock, "proc");
-      p->kstack = KSTACK((int) (p - proc));
-      p->nice = 10;
+      p->kstack = KSTACK((int) (p - proc));      
   }
 }
 
@@ -132,6 +131,7 @@ allocproc(void)
 found:
   p->pid = allocpid();
   p->state = USED;
+  p->nice = 10;
 
   // Allocate a trapframe page.
   if((p->trapframe = (struct trapframe *)kalloc()) == 0){

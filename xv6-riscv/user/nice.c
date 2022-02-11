@@ -5,24 +5,14 @@
 struct proc proc[NPROC];
 
 int
-nice(int n, char* pr, char* args[])
+nice(int n, char* proc, char* args[])
 {
-
-  int pid;
-
+  printf("pid: %d", getpid());
   if (n > 19 || n < 0) {
     return -1;
-  }
-  exec(pr, args);
-  struct proc *p;
-  for(p = proc; p < &proc[NPROC]; p++) {
-    if (p->state == UNUSED) {
-      p--;
-      pid = p->pid;
-      break;
-    }
-  }
-  change_nice(n, pid);
+  } 
+  change_nice(n, getpid());
+  exec(proc, args);
   return 0;
 }
 
@@ -39,3 +29,4 @@ int main(int argc, char *argv[]) {
   }
   return nice(n, proc, arguments);
 }
+
