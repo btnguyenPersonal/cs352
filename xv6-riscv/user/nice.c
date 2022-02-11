@@ -2,8 +2,6 @@
 #include "kernel/stat.h"
 #include "user/user.h"
 
-struct proc proc[NPROC];
-
 int
 nice(int n, char* proc, char* args[])
 {
