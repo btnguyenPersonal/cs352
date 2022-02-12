@@ -54,6 +54,7 @@ procinit(void)
       initlock(&p->lock, "proc");
       p->kstack = KSTACK((int) (p - proc));
   }
+  p->nice = 10;
 }
 
 // Must be called with interrupts disabled,
@@ -164,6 +165,7 @@ freeproc(struct proc *p)
   p->killed = 0;
   p->xstate = 0;
   p->state = UNUSED;
+  p->nice = 10;
 }
 
 // Create a user page table for a given process,
