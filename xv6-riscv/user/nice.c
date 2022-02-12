@@ -5,18 +5,17 @@
 int
 nice(int n, char* proc, char* args[])
 {
-  printf("pid: %d", getpid());
   if (n > 19 || n < 0) {
     return -1;
   } 
-  change_nice(n, getpid());
+  change_nice(n);
   exec(proc, args);
   return 0;
 }
 
 int main(int argc, char *argv[]) {
   if (argc < 3) {
-    printf("nice: invalid parameters\n", argv[i]);
+    printf("nice: invalid parameters\n");
     exit(1);
   }
   int n = atoi(argv[1]);

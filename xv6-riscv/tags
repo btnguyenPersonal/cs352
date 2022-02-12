@@ -164,6 +164,7 @@ SSTATUS_SPIE	kernel/riscv.h	44;"	d
 SSTATUS_SPP	kernel/riscv.h	43;"	d
 SSTATUS_UIE	kernel/riscv.h	47;"	d
 SSTATUS_UPIE	kernel/riscv.h	45;"	d
+SYS_change_nice	kernel/syscall.h	24;"	d
 SYS_chdir	kernel/syscall.h	10;"	d
 SYS_close	kernel/syscall.h	22;"	d
 SYS_dup	kernel/syscall.h	11;"	d
@@ -1535,6 +1536,7 @@ cfe	user/grind.asm	/^     cfe:	a011                	j	d02 <gets+0x56>$/;"	l
 cfe	user/sh.asm	/^     cfe:	fd06071b          	addiw	a4,a2,-48$/;"	l
 ch	kernel/kernel.asm	/^    ch = pi->data[pi->nread++ % PIPESIZE];$/;"	d
 chan	kernel/proc.h	/^  void *chan;                  \/\/ If non-zero, sleeping on chan$/;"	m	struct:proc
+change_nice	kernel/proc.c	/^change_nice(int n, int pid)$/;"	f
 char	user/cat.asm	/^char buf[512];$/;"	l
 char	user/init.asm	/^char *argv[] = { "sh", 0 };$/;"	l
 char	user/sh.asm	/^char symbols[] = "<|>&;()";$/;"	l
@@ -4278,6 +4280,7 @@ virtq_avail	kernel/virtio.h	/^struct virtq_avail {$/;"	s
 virtq_desc	kernel/virtio.h	/^struct virtq_desc {$/;"	s
 virtq_used	kernel/virtio.h	/^struct virtq_used {$/;"	s
 virtq_used_elem	kernel/virtio.h	/^struct virtq_used_elem {$/;"	s
+void	kernel/kernel.asm	/^void $/;"	l
 void	kernel/kernel.asm	/^void *$/;"	l
 void	kernel/kernel.asm	/^void uartstart();$/;"	l
 void	kernel/kernel.asm	/^void$/;"	l

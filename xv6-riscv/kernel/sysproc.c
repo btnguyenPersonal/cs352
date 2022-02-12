@@ -111,7 +111,11 @@ sys_pcount(void)
 
 // return the nice value
 uint64
-sys_nice(void)
+sys_change_nice(void)
 {
-  return myproc()->nice;
+  int n;
+  if(argint(0, &n) < 0)
+    return -1;
+  myproc()->nice = n;
+  return 0;
 }
