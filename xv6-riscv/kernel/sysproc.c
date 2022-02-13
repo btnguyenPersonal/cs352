@@ -117,5 +117,6 @@ sys_nice(void)
   if(argint(0, &n) < 0)
     return -1;
   myproc()->nice = n;
+  printf("nice value set: %d\n", n);
   return n;
 }

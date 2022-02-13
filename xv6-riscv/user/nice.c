@@ -21,11 +21,9 @@ main(int argc, char *argv[]) {
   }
   int n = atoi(argv[1]);
   char* proc = argv[2];
-  char* arguments[argc - 3]; 
-  int i = 3;
-  while (argv[i] != 0) {
-    arguments[i - 3] = argv[i];
-    i++;
+  char* arguments[argc]; 
+  for (int i = 2; i < argc; i++) {
+    arguments[i - 2] = argv[i];
   }
   return chnice(n, proc, arguments);
 }
