@@ -136,16 +136,16 @@ uint64 sys_getpstat(void) {
     // The data to fill in the arrays comes from the process table array proc[].
     for(int i = 0; i < NPROC; i++)
     {
-	if(proc[i].state == USED)
-	{
-	  kpstat->inuse[i] = 1;
-	} else {
-	  kpstat->inuse[i] = 0;
-	}
+      if(proc[i].state == USED)
+      {
+        kpstat->inuse[i] = 1;
+      } else {
+        kpstat->inuse[i] = 0;
+      }
 
-	kpstat->pid[i] = proc[i].pid;
-	kpstat->nice[i] = proc[i].nice;
-    }
+      kpstat->pid[i] = proc[i].pid;
+      kpstat->nice[i] = proc[i].nice;
+  }
 
 
     // copy pstat from kernel memory to user memory
