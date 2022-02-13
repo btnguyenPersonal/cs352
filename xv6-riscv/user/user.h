@@ -25,6 +25,7 @@ int sleep(int);
 int uptime(void);
 int pcount(void);
 int nice(int);
+int getpstat(void *);
 
 // ulib.c
 int stat(const char*, struct stat*);

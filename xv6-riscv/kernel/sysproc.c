@@ -6,6 +6,7 @@
 #include "memlayout.h"
 #include "spinlock.h"
 #include "proc.h"
+#include "pstat.h"
 
 uint64
 sys_exit(void)
@@ -138,13 +139,13 @@ uint64 sys_getpstat(void) {
     {
       if(proc[i].state == USED)
       {
-        kpstat->inuse[i] = 1;
+        kpstat.inuse[i] = 1;
       } else {
-        kpstat->inuse[i] = 0;
+        kpstat.inuse[i] = 0;
       }
 
-      kpstat->pid[i] = proc[i].pid;
-      kpstat->nice[i] = proc[i].nice;
+      kpstat.pid[i] = proc[i].pid;
+      kpstat.nice[i] = proc[i].nice;
   }
 
 
