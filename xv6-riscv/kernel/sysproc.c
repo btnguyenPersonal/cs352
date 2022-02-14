@@ -143,9 +143,9 @@ uint64 sys_getpstat(void) {
       } else {
         kpstat.inuse[i] = 0;
       }
-
       kpstat.pid[i] = proc[i].pid;
       kpstat.nice[i] = proc[i].nice;
+      printf("pid: %d\nnice: %d\ninuse: %d\n", kpstat.pid[i], kpstat.nice[i], kpstat.inuse[i]);
   }
 
 

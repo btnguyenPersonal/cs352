@@ -1,3 +1,4 @@
+#include "kernel/pstat.h"
 struct stat;
 struct rtcdate;
 
@@ -25,7 +26,7 @@ int sleep(int);
 int uptime(void);
 int pcount(void);
 int nice(int);
-int getpstat(void *);
+int getpstat(struct pstat *);
 
 // ulib.c
 int stat(const char*, struct stat*);
