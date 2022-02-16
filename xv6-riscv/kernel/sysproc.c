@@ -145,8 +145,8 @@ uint64 sys_getpstat(void) {
       }
       kpstat.pid[i] = proc[i].pid;
       kpstat.nice[i] = proc[i].nice;
-      printf("pid: %d\nnice: %d\ninuse: %d\n", kpstat.pid[i], kpstat.nice[i], kpstat.inuse[i]);
-  }
+    //  printf("pid: %d\nnice: %d\ninuse: %d\n", kpstat.pid[i], kpstat.nice[i], kpstat.inuse[i]);
+    }
 
 
     // copy pstat from kernel memory to user memory

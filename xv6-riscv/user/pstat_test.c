@@ -8,10 +8,10 @@ main(int argc, char *argv[]) {
   struct pstat stats;
   getpstat(&stats);
 
-  //for(int i =0; i < (sizeof(stats.pid) / sizeof(stats.pid[0])); i++)
-  //{
-   // printf("pid: %d\ninuse: %d\nnice value: %d\n", stats.pid[i], stats.inuse[i], stats.nice[i]);
-  //}  
+  for(int i = 0; i < NPROC; i++)
+  {
+    printf("#%d\npid: %d  inuse: %d  nice value: %d\n", i, stats.pid[i], stats.inuse[i], stats.nice[i]);
+  }  
 
-  return 0;
+  exit(0);
 }
