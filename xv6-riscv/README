@@ -1,6 +1,6 @@
 Names:
   Benjamin Nguyen btnguyen@iastate.edu
-  Dylan Hampton dhampton@iastate.edu
+  Dylan Hampton dhampton@iastate.edu  
 
 Brief Description:
   In this project, we have added nice values to processes, and the ability for users to change the nice values for their processes that they are running.
