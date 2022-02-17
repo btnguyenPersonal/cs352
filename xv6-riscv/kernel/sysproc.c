@@ -117,6 +117,7 @@ sys_nice(void)
   int n;
   if(argint(0, &n) < 0)
     return -1;
+  // sets process's nice value to n
   myproc()->nice = n;
   printf("nice value set: %d\n", n);
   return n;
@@ -137,12 +138,14 @@ sys_getpstat(void) {
   // The data to fill in the arrays comes from the process table array proc[].
   for(int i = 0; i < NPROC; i++)
   {
+    // if process state is used, set inuse to 1, otherwise 0
     if(proc[i].state == USED)
     {
       kpstat.inuse[i] = 1;
     } else {
       kpstat.inuse[i] = 0;
     }
+    // sets pid and nice value for kpstat
     kpstat.pid[i] = proc[i].pid;
     kpstat.nice[i] = proc[i].nice;
     //  printf("pid: %d\nnice: %d\ninuse: %d\n", kpstat.pid[i], kpstat.nice[i], kpstat.inuse[i]);

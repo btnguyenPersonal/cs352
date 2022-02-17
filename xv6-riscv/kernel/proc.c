@@ -165,7 +165,7 @@ freeproc(struct proc *p)
   p->killed = 0;
   p->xstate = 0;
   p->state = UNUSED;
-  p->nice = 10;
+  p->nice = 10; // resets the nice value when the process is killed
 }
 
 // Create a user page table for a given process,
