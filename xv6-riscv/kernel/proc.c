@@ -120,6 +120,7 @@ found:
   p->pid = allocpid();
   p->state = USED;
   p->nice = 10; //initializes nice value
+  p->runtime = 0; //initializes runtime 
 
   // Allocate a trapframe page.
   if((p->trapframe = (struct trapframe *)kalloc()) == 0){
@@ -493,6 +494,28 @@ sched(void)
   mycpu()->intena = intena;
 }
 
+//Round-robin queue based scheduler
+void
+sched_rr(void)
+{
+  int intena;
+  struct proc *p = myproc();
+
+  if(!holding(&p->lock))
+    panic("sched p->lock");
+  if(mycpu()->noff != 1)
+    panic("sched locks");
+  if(p->state == RUNNING)
+    panic("sched running");
+  if(intr_get())
+    panic("sched interruptible");
+
+  intena = mycpu()->intena;
+  swtch(&p->context, &mycpu()->context);
+  mycpu()->intena = intena;
+}
+
+
 // Give up the CPU for one scheduling round.
 void
 yield(void)
@@ -500,6 +523,7 @@ yield(void)
   struct proc *p = myproc();
   acquire(&p->lock);
   p->state = RUNNABLE;
+  p->runtime = p->runtime + 1; //increment runtime each time process is interrupted by a timer 
   sched();
   release(&p->lock);
 }
