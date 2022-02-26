@@ -5,6 +5,18 @@
 #include "spinlock.h"
 #include "proc.h"
 #include "defs.h"
+#define MAX_UINT64 (-1) 
+#define EMPTY MAX_UINT64 
+ 
+// a node of the linked list 
+struct qentry { 
+    uint64 pass; // used by the stride scheduler to keep the list sorted 
+    uint64 prev; // index of previous qentry in list 
+    uint64 next; // index of next qentry in list 
+} 
+ 
+// a fixed size table where the index of a process in proc[] is the same in qtable[] 
+qentry qtable[NPROC+2];
 
 struct cpu cpus[NCPU];
 
@@ -496,25 +508,34 @@ sched(void)
 
 //Round-robin queue based scheduler
 void
-sched_rr(void)
+scheduler_rr(void)
 {
-  int intena;
-  struct proc *p = myproc();
+  struct proc *p;
+  struct cpu *c = mycpu();
+  
+  c->proc = 0;
+  for(;;){
+    // Avoid deadlock by ensuring that devices can interrupt.
+    intr_on();
 
-  if(!holding(&p->lock))
-    panic("sched p->lock");
-  if(mycpu()->noff != 1)
-    panic("sched locks");
-  if(p->state == RUNNING)
-    panic("sched running");
-  if(intr_get())
-    panic("sched interruptible");
+    for(p = proc; p < &proc[NPROC]; p++) {
+      acquire(&p->lock);
+      if(p->state == RUNNABLE) {
+        // Switch to chosen process.  It is the process's job
+        // to release its lock and then reacquire it
+        // before jumping back to us.
+        p->state = RUNNING;
+        c->proc = p;
+        swtch(&c->context, &p->context);
 
-  intena = mycpu()->intena;
-  swtch(&p->context, &mycpu()->context);
-  mycpu()->intena = intena;
+        // Process is done running for now.
+        // It should have changed its p->state before coming back.
+        c->proc = 0;
+      }
+      release(&p->lock);
+    }
+  }
 }
-
 
 // Give up the CPU for one scheduling round.
 void
