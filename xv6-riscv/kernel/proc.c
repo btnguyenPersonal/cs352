@@ -13,10 +13,46 @@ struct qentry {
     uint64 pass; // used by the stride scheduler to keep the list sorted 
     uint64 prev; // index of previous qentry in list 
     uint64 next; // index of next qentry in list 
-} 
- 
+};
+
 // a fixed size table where the index of a process in proc[] is the same in qtable[] 
-qentry qtable[NPROC+2];
+struct qentry qtable[NPROC+2];
+
+int enqueue(struct qentry q)
+{
+  int index = -1;
+  for(int i = 0; i < NPROC; i++)
+  {
+    if(qtable[i].prev == -1 && qtable[i].next == -1)
+    {
+      index = i;
+      break;
+    }
+  }
+
+  qtable[index] = q;  // insert q into qtable at the first available spot
+  q.next = NPROC+1;   // q.next = Tail
+  q.prev = qtable[NPROC+1].prev;  // q.prev = Tail.prev
+  qtable[qtable[NPROC+1].prev].next = index;  // (tail.prev).next = q
+  qtable[NPROC+1].prev = index;  // tail.prev = q
+
+  return index;
+}
+
+struct qentry dequeue()
+{
+  struct qentry q = qtable[qtable[NPROC].next];  // temp store for return
+
+  qtable[qtable[NPROC].next].next = -1; // reset dequeued's next 
+  qtable[qtable[NPROC].next].prev = -1; // reset dequeued's prev 
+  qtable[qtable[NPROC].next].pass = 0;    // reset dequeued's pass 
+
+  qtable[q.next].prev = NPROC;  // (2nd_in_queue).prev = head
+  qtable[NPROC].next = q.next;  // head.next = (2nd_in_queue)
+
+  return q;
+}
+
 
 struct cpu cpus[NCPU];
 
@@ -29,6 +65,7 @@ struct spinlock pid_lock;
 
 extern void forkret(void);
 static void freeproc(struct proc *p);
+
 
 extern char trampoline[]; // trampoline.S
 
@@ -66,6 +103,18 @@ procinit(void)
       initlock(&p->lock, "proc");
       p->kstack = KSTACK((int) (p - proc));
   }
+
+  for(int i = 0; i < NPROC; i++)
+  {
+    qtable[i].next = -1;
+    qtable[i].prev = -1;
+    qtable[i].pass = 0;
+  }
+
+  qtable[NPROC].prev = -1; // intialize qtable head
+  qtable[NPROC].next = NPROC+1;
+  qtable[NPROC+1].prev = NPROC; // intialize qtable tail
+  qtable[NPROC+1].next = -1;
 }
 
 // Must be called with interrupts disabled,
@@ -479,33 +528,6 @@ scheduler(void)
   }
 }
 
-// Switch to scheduler.  Must hold only p->lock
-// and have changed proc->state. Saves and restores
-// intena because intena is a property of this
-// kernel thread, not this CPU. It should
-// be proc->intena and proc->noff, but that would
-// break in the few places where a lock is held but
-// there's no process.
-void
-sched(void)
-{
-  int intena;
-  struct proc *p = myproc();
-
-  if(!holding(&p->lock))
-    panic("sched p->lock");
-  if(mycpu()->noff != 1)
-    panic("sched locks");
-  if(p->state == RUNNING)
-    panic("sched running");
-  if(intr_get())
-    panic("sched interruptible");
-
-  intena = mycpu()->intena;
-  swtch(&p->context, &mycpu()->context);
-  mycpu()->intena = intena;
-}
-
 //Round-robin queue based scheduler
 void
 scheduler_rr(void)
@@ -536,6 +558,65 @@ scheduler_rr(void)
     }
   }
 }
+
+//Stride based scheduler
+void
+scheduler_stride(void)
+{
+  struct proc *p;
+  struct cpu *c = mycpu();
+  
+  c->proc = 0;
+  for(;;){
+    // Avoid deadlock by ensuring that devices can interrupt.
+    intr_on();
+
+    for(p = proc; p < &proc[NPROC]; p++) {
+      acquire(&p->lock);
+      if(p->state == RUNNABLE) {
+        // Switch to chosen process.  It is the process's job
+        // to release its lock and then reacquire it
+        // before jumping back to us.
+        p->state = RUNNING;
+        c->proc = p;
+        swtch(&c->context, &p->context);
+
+        // Process is done running for now.
+        // It should have changed its p->state before coming back.
+        c->proc = 0;
+      }
+      release(&p->lock);
+    }
+  }
+}
+
+// Switch to scheduler.  Must hold only p->lock
+// and have changed proc->state. Saves and restores
+// intena because intena is a property of this
+// kernel thread, not this CPU. It should
+// be proc->intena and proc->noff, but that would
+// break in the few places where a lock is held but
+// there's no process.
+void
+sched(void)
+{
+  int intena;
+  struct proc *p = myproc();
+
+  if(!holding(&p->lock))
+    panic("sched p->lock");
+  if(mycpu()->noff != 1)
+    panic("sched locks");
+  if(p->state == RUNNING)
+    panic("sched running");
+  if(intr_get())
+    panic("sched interruptible");
+
+  intena = mycpu()->intena;
+  swtch(&p->context, &mycpu()->context);
+  mycpu()->intena = intena;
+}
+
 
 // Give up the CPU for one scheduling round.
 void

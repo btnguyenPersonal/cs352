@@ -45,12 +45,15 @@ main()
     case 1:
       scheduler();
       break;
+      
     case 2:
       scheduler_rr();
       break;
-    // case 3:
-    //   scheduler_stride();
-    //   break;
+
+    case 3:
+      scheduler_stride();
+      break;
+      
     default:
       printf("no scheduler found");
       break;
