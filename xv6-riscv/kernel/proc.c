@@ -20,10 +20,10 @@ struct qentry qtable[NPROC+2];
 
 int enqueue(struct qentry q)
 {
-  int index = -1;
+  int index = EMPTY;
   for(int i = 0; i < NPROC; i++)
   {
-    if(qtable[i].prev == -1 && qtable[i].next == -1)
+    if(qtable[i].prev == EMPTY && qtable[i].next == EMPTY)
     {
       index = i;
       break;
@@ -43,8 +43,8 @@ struct qentry dequeue()
 {
   struct qentry q = qtable[qtable[NPROC].next];  // temp store for return
 
-  qtable[qtable[NPROC].next].next = -1; // reset dequeued's next 
-  qtable[qtable[NPROC].next].prev = -1; // reset dequeued's prev 
+  qtable[qtable[NPROC].next].next = EMPTY; // reset dequeued's next 
+  qtable[qtable[NPROC].next].prev = EMPTY; // reset dequeued's prev 
   qtable[qtable[NPROC].next].pass = 0;    // reset dequeued's pass 
 
   qtable[q.next].prev = NPROC;  // (2nd_in_queue).prev = head
@@ -106,15 +106,15 @@ procinit(void)
 
   for(int i = 0; i < NPROC; i++)
   {
-    qtable[i].next = -1;
-    qtable[i].prev = -1;
+    qtable[i].next = EMPTY;
+    qtable[i].prev = EMPTY;
     qtable[i].pass = 0;
   }
 
-  qtable[NPROC].prev = -1; // intialize qtable head
+  qtable[NPROC].prev = EMPTY; // intialize qtable head
   qtable[NPROC].next = NPROC+1;
   qtable[NPROC+1].prev = NPROC; // intialize qtable tail
-  qtable[NPROC+1].next = -1;
+  qtable[NPROC+1].next = EMPTY;
 }
 
 // Must be called with interrupts disabled,
