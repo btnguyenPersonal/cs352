@@ -18,31 +18,50 @@ struct qentry {
 // a fixed size table where the index of a process in proc[] is the same in qtable[] 
 struct qentry qtable[NPROC+2];
 
-int enqueue(struct qentry q)
+int enqueue(struct proc *p)
 {
-  int index = EMPTY;
-  for(int i = 0; i < NPROC; i++)
-  {
-    if(qtable[i].prev == EMPTY && qtable[i].next == EMPTY)
-    {
-      index = i;
-      break;
-    }
-  }
-
-  qtable[index] = q;  // insert q into qtable at the first available spot
+  int index = p - proc;
+  printf("enqueue: %d %d\n", index, p->pid);
+  // for (int i = 0; i < NPROC + 2; i++) {
+  //   if (p->pid == proc[i].pid) {
+  //     index = i;
+  //     break;
+  //   }
+  // }
+  struct qentry q;
+  q.pass = 0;
+  q.next = EMPTY;
+  q.prev = EMPTY;
+  qtable[index] = q;  // insert q into qtable
   q.next = NPROC+1;   // q.next = Tail
+  printf("    q.next: %d\n", NPROC+1);
   q.prev = qtable[NPROC+1].prev;  // q.prev = Tail.prev
+  printf("    q.prev: %d\n", qtable[NPROC+1].prev);
   qtable[qtable[NPROC+1].prev].next = index;  // (tail.prev).next = q
+  printf("    (tail.prev).next: %d\n", qtable[qtable[NPROC+1].prev].next);
   qtable[NPROC+1].prev = index;  // tail.prev = q
-
+  printf("    tail.prev: %d\n", qtable[NPROC+1].prev);
   return index;
 }
 
-struct qentry dequeue()
+struct proc * dequeue()
 {
+  printf("dequeue starts\n");
+  struct proc *p = &proc[0];
   struct qentry q = qtable[qtable[NPROC].next];  // temp store for return
+  for (int i = 0; i < NPROC; i++) {
+    if (q.next == qtable[i].next && q.prev == qtable[i].prev) {
+      if (!(q.next == EMPTY || q.prev == EMPTY)) {
+        printf("dequeue: %d\n", i);
+        p = &proc[i];
+        break;
+      }
+    }
+  }
 
+  if (p->state != RUNNABLE || qtable[NPROC].next == NPROC+1) {
+    return p;
+  }
   qtable[qtable[NPROC].next].next = EMPTY; // reset dequeued's next 
   qtable[qtable[NPROC].next].prev = EMPTY; // reset dequeued's prev 
   qtable[qtable[NPROC].next].pass = 0;    // reset dequeued's pass 
@@ -50,7 +69,7 @@ struct qentry dequeue()
   qtable[q.next].prev = NPROC;  // (2nd_in_queue).prev = head
   qtable[NPROC].next = q.next;  // head.next = (2nd_in_queue)
 
-  return q;
+  return p;
 }
 
 
@@ -306,6 +325,7 @@ userinit(void)
   safestrcpy(p->name, "initcode", sizeof(p->name));
   p->cwd = namei("/");
 
+  enqueue(p);
   p->state = RUNNABLE;
 
   release(&p->lock);
@@ -377,6 +397,7 @@ fork(void)
 
   acquire(&np->lock);
   np->state = RUNNABLE;
+  enqueue(np);
   release(&np->lock);
 
   return pid;
@@ -546,6 +567,7 @@ scheduler_rr(void)
         // Switch to chosen process.  It is the process's job
         // to release its lock and then reacquire it
         // before jumping back to us.
+        dequeue(p);
         p->state = RUNNING;
         c->proc = p;
         swtch(&c->context, &p->context);
@@ -577,6 +599,7 @@ scheduler_stride(void)
         // Switch to chosen process.  It is the process's job
         // to release its lock and then reacquire it
         // before jumping back to us.
+        dequeue(p);
         p->state = RUNNING;
         c->proc = p;
         swtch(&c->context, &p->context);
@@ -625,6 +648,7 @@ yield(void)
   struct proc *p = myproc();
   acquire(&p->lock);
   p->state = RUNNABLE;
+  enqueue(p);
   p->runtime = p->runtime + 1; //increment runtime each time process is interrupted by a timer 
   sched();
   release(&p->lock);
@@ -694,6 +718,7 @@ wakeup(void *chan)
       acquire(&p->lock);
       if(p->state == SLEEPING && p->chan == chan) {
         p->state = RUNNABLE;
+        enqueue(p);
       }
       release(&p->lock);
     }
@@ -715,6 +740,7 @@ kill(int pid)
       if(p->state == SLEEPING){
         // Wake process from sleep().
         p->state = RUNNABLE;
+        enqueue(p);
       }
       release(&p->lock);
       return 0;
