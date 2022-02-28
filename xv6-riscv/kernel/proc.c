@@ -33,6 +33,7 @@ void print_qtable() {
 int enqueue(struct proc *p)
 {
   int index = p - proc;
+  // checks if the process is already in the queue
   if (qtable[index].prev != EMPTY && qtable[index].next != EMPTY) {
     return -1;
   }
@@ -41,37 +42,27 @@ int enqueue(struct proc *p)
   struct qentry q;
   q.pass = 0;
   q.next = TAIL;   // q.next = Tail
-  // printf("    q.next: %d\n", TAIL);
   q.prev = qtable[TAIL].prev;  // q.prev = Tail.prev
   qtable[index] = q;  // insert q into qtable
-  // printf("    q.prev: %d\n", qtable[TAIL].prev);
   qtable[qtable[TAIL].prev].next = index;  // (tail.prev).next = q
-  // printf("    (tail.prev).next: %d\n", qtable[qtable[TAIL].prev].next);
   qtable[TAIL].prev = index;  // tail.prev = q
-  // printf("    tail.prev: %d\n", qtable[TAIL].prev);
   printf("\nAFTER:\n");
   print_qtable();
   return index;
 }
 
-struct proc * dequeue()
+int dequeue()
 {
-  printf("dequeue starts\n");
+  // printf("\nDEQUEUE BEFORE:\n");
+  // print_qtable();
+  if (qtable[HEAD].next == TAIL ){
+    return -1;
+  }
+
   struct proc *p = &proc[0];
   struct qentry q = qtable[qtable[HEAD].next];  // temp store for return
-  // for (int i = 0; i < NPROC; i++) {
-  //   if (q.next == qtable[i].next && q.prev == qtable[i].prev) {
-  //     if (!(q.next == EMPTY || q.prev == EMPTY)) {
-  //       printf("dequeue: %d\n", i);
   p = &proc[qtable[HEAD].next];
-  //       break;
-  //     }
-  //   }
-  // }
 
-  if (p->state != RUNNABLE || qtable[HEAD].next == TAIL) {
-    return p;
-  }
   qtable[qtable[HEAD].next].next = EMPTY; // reset dequeued's next 
   qtable[qtable[HEAD].next].prev = EMPTY; // reset dequeued's prev 
   qtable[qtable[HEAD].next].pass = 0;    // reset dequeued's pass 
@@ -79,7 +70,10 @@ struct proc * dequeue()
   qtable[q.next].prev = HEAD;  // (2nd_in_queue).prev = head
   qtable[HEAD].next = q.next;  // head.next = (2nd_in_queue)
 
-  return p;
+  printf("\nDEQUEUE AFTER:\n");
+  print_qtable();
+  printf("\nPID: %d\n", p->pid);
+  return p - proc;
 }
 
 
@@ -335,8 +329,9 @@ userinit(void)
   safestrcpy(p->name, "initcode", sizeof(p->name));
   p->cwd = namei("/");
 
-  enqueue(p);
   p->state = RUNNABLE;
+  enqueue(p);
+  printf("enqueue 1\n");
 
   release(&p->lock);
 }
@@ -408,6 +403,7 @@ fork(void)
   acquire(&np->lock);
   np->state = RUNNABLE;
   enqueue(np);
+  printf("enqueue 2\n");
   release(&np->lock);
 
   return pid;
@@ -570,23 +566,24 @@ scheduler_rr(void)
   for(;;){
     // Avoid deadlock by ensuring that devices can interrupt.
     intr_on();
-
-    for(p = proc; p < &proc[NPROC]; p++) {
+    
+    int index = dequeue();
+    while(index != -1) {
+      p = &proc[index]; 
+      printf("SCHEDULERJKWHLEFSKDF: %d\n", p->pid);
       acquire(&p->lock);
-      if(p->state == RUNNABLE) {
-        // Switch to chosen process.  It is the process's job
-        // to release its lock and then reacquire it
-        // before jumping back to us.
-        dequeue(p);
-        p->state = RUNNING;
-        c->proc = p;
-        swtch(&c->context, &p->context);
+      // Switch to chosen process.  It is the process's job
+      // to release its lock and then reacquire it
+      // before jumping back to us.
+      p->state = RUNNING;
+      c->proc = p;
+      swtch(&c->context, &p->context);
 
-        // Process is done running for now.
-        // It should have changed its p->state before coming back.
-        c->proc = 0;
-      }
+      // Process is done running for now.
+      // It should have changed its p->state before coming back.
+      c->proc = 0;
       release(&p->lock);
+      index = dequeue();
     }
   }
 }
@@ -659,6 +656,7 @@ yield(void)
   acquire(&p->lock);
   p->state = RUNNABLE;
   enqueue(p);
+  printf("enqueue 3\n");
   p->runtime = p->runtime + 1; //increment runtime each time process is interrupted by a timer 
   sched();
   release(&p->lock);
@@ -729,6 +727,7 @@ wakeup(void *chan)
       if(p->state == SLEEPING && p->chan == chan) {
         p->state = RUNNABLE;
         enqueue(p);
+        printf("enqueue 4\n");
       }
       release(&p->lock);
     }
@@ -751,6 +750,7 @@ kill(int pid)
         // Wake process from sleep().
         p->state = RUNNABLE;
         enqueue(p);
+        printf("enqueue 5\n");
       }
       release(&p->lock);
       return 0;
