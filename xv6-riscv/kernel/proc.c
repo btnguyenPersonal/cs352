@@ -7,6 +7,8 @@
 #include "defs.h"
 #define MAX_UINT64 (-1) 
 #define EMPTY MAX_UINT64 
+#define HEAD NPROC
+#define TAIL NPROC+1
  
 // a node of the linked list 
 struct qentry { 
@@ -18,29 +20,37 @@ struct qentry {
 // a fixed size table where the index of a process in proc[] is the same in qtable[] 
 struct qentry qtable[NPROC+2];
 
+void print_qtable() {
+  struct qentry q = qtable[HEAD];
+  printf("HEAD\n");
+  while (q.next != TAIL) {
+    printf("%d\n", q.next);
+    q = qtable[q.next];
+  }
+  printf("TAIL\n");
+}
+
 int enqueue(struct proc *p)
 {
   int index = p - proc;
-  printf("enqueue: %d %d\n", index, p->pid);
-  // for (int i = 0; i < NPROC + 2; i++) {
-  //   if (p->pid == proc[i].pid) {
-  //     index = i;
-  //     break;
-  //   }
-  // }
+  if (qtable[index].prev != EMPTY && qtable[index].next != EMPTY) {
+    return -1;
+  }
+  printf("\nBEFORE:\n");
+  print_qtable();
   struct qentry q;
   q.pass = 0;
-  q.next = EMPTY;
-  q.prev = EMPTY;
+  q.next = TAIL;   // q.next = Tail
+  // printf("    q.next: %d\n", TAIL);
+  q.prev = qtable[TAIL].prev;  // q.prev = Tail.prev
   qtable[index] = q;  // insert q into qtable
-  q.next = NPROC+1;   // q.next = Tail
-  printf("    q.next: %d\n", NPROC+1);
-  q.prev = qtable[NPROC+1].prev;  // q.prev = Tail.prev
-  printf("    q.prev: %d\n", qtable[NPROC+1].prev);
-  qtable[qtable[NPROC+1].prev].next = index;  // (tail.prev).next = q
-  printf("    (tail.prev).next: %d\n", qtable[qtable[NPROC+1].prev].next);
-  qtable[NPROC+1].prev = index;  // tail.prev = q
-  printf("    tail.prev: %d\n", qtable[NPROC+1].prev);
+  // printf("    q.prev: %d\n", qtable[TAIL].prev);
+  qtable[qtable[TAIL].prev].next = index;  // (tail.prev).next = q
+  // printf("    (tail.prev).next: %d\n", qtable[qtable[TAIL].prev].next);
+  qtable[TAIL].prev = index;  // tail.prev = q
+  // printf("    tail.prev: %d\n", qtable[TAIL].prev);
+  printf("\nAFTER:\n");
+  print_qtable();
   return index;
 }
 
@@ -48,26 +58,26 @@ struct proc * dequeue()
 {
   printf("dequeue starts\n");
   struct proc *p = &proc[0];
-  struct qentry q = qtable[qtable[NPROC].next];  // temp store for return
-  for (int i = 0; i < NPROC; i++) {
-    if (q.next == qtable[i].next && q.prev == qtable[i].prev) {
-      if (!(q.next == EMPTY || q.prev == EMPTY)) {
-        printf("dequeue: %d\n", i);
-        p = &proc[i];
-        break;
-      }
-    }
-  }
+  struct qentry q = qtable[qtable[HEAD].next];  // temp store for return
+  // for (int i = 0; i < NPROC; i++) {
+  //   if (q.next == qtable[i].next && q.prev == qtable[i].prev) {
+  //     if (!(q.next == EMPTY || q.prev == EMPTY)) {
+  //       printf("dequeue: %d\n", i);
+  p = &proc[qtable[HEAD].next];
+  //       break;
+  //     }
+  //   }
+  // }
 
-  if (p->state != RUNNABLE || qtable[NPROC].next == NPROC+1) {
+  if (p->state != RUNNABLE || qtable[HEAD].next == TAIL) {
     return p;
   }
-  qtable[qtable[NPROC].next].next = EMPTY; // reset dequeued's next 
-  qtable[qtable[NPROC].next].prev = EMPTY; // reset dequeued's prev 
-  qtable[qtable[NPROC].next].pass = 0;    // reset dequeued's pass 
+  qtable[qtable[HEAD].next].next = EMPTY; // reset dequeued's next 
+  qtable[qtable[HEAD].next].prev = EMPTY; // reset dequeued's prev 
+  qtable[qtable[HEAD].next].pass = 0;    // reset dequeued's pass 
 
-  qtable[q.next].prev = NPROC;  // (2nd_in_queue).prev = head
-  qtable[NPROC].next = q.next;  // head.next = (2nd_in_queue)
+  qtable[q.next].prev = HEAD;  // (2nd_in_queue).prev = head
+  qtable[HEAD].next = q.next;  // head.next = (2nd_in_queue)
 
   return p;
 }
