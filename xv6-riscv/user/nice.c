@@ -2,28 +2,35 @@
 #include "kernel/stat.h"
 #include "user/user.h"
 
+// sets the nice value and executes the program
 int
-nice(int n, char* proc, char* args[])
+chnice(int n, char* proc, char* args[])
 {
+  // check nice value boundaries
   if (n > 19 || n < 0) {
     return -1;
   } 
-  change_nice(n);
+  // changes nice value to n
+  nice(n);
+  // executes the process
   exec(proc, args);
   return 0;
 }
-
-int main(int argc, char *argv[]) {
+int
+main(int argc, char *argv[]) {
+  // parameter check
   if (argc < 3) {
     printf("nice: invalid parameters\n");
     exit(1);
   }
+  // sets n to argument 1
+  // sets proc to argument 2
+  // sets the rest to arguments
   int n = atoi(argv[1]);
   char* proc = argv[2];
-  char*[argc - 3] arguments; 
-  for (int i = 3; i < argc; i++) {
-    arguments[i - 3] = argv[i];
+  char* arguments[argc]; 
+  for (int i = 2; i < argc; i++) {
+    arguments[i - 2] = argv[i];
   }
-  return nice(n, proc, arguments);
+  return chnice(n, proc, arguments);
 }
-

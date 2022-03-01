@@ -4,14 +4,14 @@ _*
 *.d
 *.asm
 *.sym
-*.img
+/* *.img */
 vectors.S
 bootblock
 entryother
 initcode
 initcode.out
 kernelmemfs
-mkfs
+/* mkfs */
 kernel/kernel
 user/usys.S
 .gdbinit

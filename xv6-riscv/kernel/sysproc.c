@@ -6,8 +6,9 @@
 #include "memlayout.h"
 #include "spinlock.h"
 #include "proc.h"
+#include "pstat.h"
 
-uint64
+  uint64
 sys_exit(void)
 {
   int n;
@@ -17,19 +18,19 @@ sys_exit(void)
   return 0;  // not reached
 }
 
-uint64
+  uint64
 sys_getpid(void)
 {
   return myproc()->pid;
 }
 
-uint64
+  uint64
 sys_fork(void)
 {
   return fork();
 }
 
-uint64
+  uint64
 sys_wait(void)
 {
   uint64 p;
@@ -38,7 +39,7 @@ sys_wait(void)
   return wait(p);
 }
 
-uint64
+  uint64
 sys_sbrk(void)
 {
   int addr;
@@ -52,7 +53,7 @@ sys_sbrk(void)
   return addr;
 }
 
-uint64
+  uint64
 sys_sleep(void)
 {
   int n;
@@ -73,7 +74,7 @@ sys_sleep(void)
   return 0;
 }
 
-uint64
+  uint64
 sys_kill(void)
 {
   int pid;
@@ -85,7 +86,7 @@ sys_kill(void)
 
 // return how many clock tick interrupts have occurred
 // since start.
-uint64
+  uint64
 sys_uptime(void)
 {
   uint xticks;
@@ -97,7 +98,7 @@ sys_uptime(void)
 }
 
 // return how many processes are running on the system
-uint64
+  uint64
 sys_pcount(void)
 {
   uint num_unused = 0;
@@ -109,13 +110,50 @@ sys_pcount(void)
   return num_unused;
 }
 
-// return the nice value
-uint64
-sys_change_nice(void)
+// changes calling process nice value
+  uint64
+sys_nice(void)
 {
   int n;
   if(argint(0, &n) < 0)
     return -1;
+  // sets process's nice value to n
   myproc()->nice = n;
-  return 0;
+  printf("nice value set: %d\n", n);
+  return n;
+}
+
+// tests the pstat file
+  uint64
+sys_getpstat(void) {
+  uint64 result = 0;
+  struct proc *p = myproc();
+  uint64 upstat; // the virtual (user) address of the passed argument struct pstat
+  struct pstat kpstat; // a struct pstat in kernel memory
+
+  // get the system call argument passed by the user program
+  if (argaddr(0, &upstat) < 0)
+    return -1;
+
+  // The data to fill in the arrays comes from the process table array proc[].
+  for(int i = 0; i < NPROC; i++)
+  {
+    // if process state is used, set inuse to 1, otherwise 0
+    if(proc[i].state == USED)
+    {
+      kpstat.inuse[i] = 1;
+    } else {
+      kpstat.inuse[i] = 0;
+    }
+    // sets pid and nice value for kpstat
+    kpstat.pid[i] = proc[i].pid;
+    kpstat.nice[i] = proc[i].nice;
+    //  printf("pid: %d\nnice: %d\ninuse: %d\n", kpstat.pid[i], kpstat.nice[i], kpstat.inuse[i]);
+  }
+
+  // copy pstat from kernel memory to user memory
+  if (copyout(p->pagetable, upstat, (char *)&kpstat, sizeof(kpstat)) < 0)
+    return -1;
+
+  return result;
 }

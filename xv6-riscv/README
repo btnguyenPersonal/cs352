@@ -1,3 +1,19 @@
+Names:
+  Benjamin Nguyen btnguyen@iastate.edu
+  Dylan Hampton dhampton@iastate.edu  
+
+Brief Description:
+  In this project, we have added nice values to processes, and the ability for users to change the nice values for their processes that they are running.
+  We have also made a pstat struct that stores the pid, inuse, and nice values of all processes on the system.
+  The pstat_test command will print out all of the values for the current processes.
+  The nice system call can be used to change the nice value for the calling process.
+  The get_pstat system call returns the pstat struct for all processes.
+
+List of added files:
+  user/nice.c
+  user/pstat_test.c
+  kernel/pstat.h
+
 xv6 is a re-implementation of Dennis Ritchie's and Ken Thompson's Unix
 Version 6 (v6).  xv6 loosely follows the structure and style of v6,
 but is implemented for a modern RISC-V multiprocessor using ANSI C.

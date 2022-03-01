@@ -5,6 +5,77 @@
 #include "spinlock.h"
 #include "proc.h"
 #include "defs.h"
+#define MAX_UINT64 (-1) 
+#define EMPTY MAX_UINT64 
+#define HEAD NPROC
+#define TAIL NPROC+1
+ 
+// a node of the linked list 
+struct qentry { 
+    uint64 pass; // used by the stride scheduler to keep the list sorted 
+    uint64 prev; // index of previous qentry in list 
+    uint64 next; // index of next qentry in list 
+};
+
+// a fixed size table where the index of a process in proc[] is the same in qtable[] 
+struct qentry qtable[NPROC+2];
+
+void print_qtable() {
+  struct qentry q = qtable[HEAD];
+  printf("HEAD\n");
+  while (q.next != TAIL) {
+    printf("%d\n", q.next);
+    q = qtable[q.next];
+  }
+  printf("TAIL\n");
+}
+
+int enqueue(struct proc *p)
+{
+  int index = p - proc;
+  // checks if the process is already in the queue
+  if (qtable[index].prev != EMPTY && qtable[index].next != EMPTY) {
+    return -1;
+  }
+  printf("\nBEFORE:\n");
+  print_qtable();
+  struct qentry q;
+  q.pass = 0;
+  q.next = TAIL;   // q.next = Tail
+  q.prev = qtable[TAIL].prev;  // q.prev = Tail.prev
+  qtable[index] = q;  // insert q into qtable
+  qtable[qtable[TAIL].prev].next = index;  // (tail.prev).next = q
+  qtable[TAIL].prev = index;  // tail.prev = q
+  printf("\nAFTER:\n");
+  print_qtable();
+  return index;
+}
+
+int dequeue()
+{
+  // printf("\nDEQUEUE BEFORE:\n");
+  // print_qtable();
+  if (qtable[HEAD].next == TAIL ){
+    return -1;
+  }
+
+  struct proc *p = &proc[0];
+  struct qentry q = qtable[qtable[HEAD].next];  // temp store for return
+  p = &proc[qtable[HEAD].next];
+
+  qtable[qtable[HEAD].next].next = EMPTY; // reset dequeued's next 
+  qtable[qtable[HEAD].next].prev = EMPTY; // reset dequeued's prev 
+  qtable[qtable[HEAD].next].pass = 0;    // reset dequeued's pass 
+
+  qtable[q.next].prev = HEAD;  // (2nd_in_queue).prev = head
+  qtable[HEAD].next = q.next;  // head.next = (2nd_in_queue)
+
+  printf("\nDEQUEUE AFTER:\n");
+  print_qtable();
+  printf("\nPID: %d\n", p->pid);
+  return p - proc;
+}
+
 
 struct cpu cpus[NCPU];
 
@@ -17,6 +88,7 @@ struct spinlock pid_lock;
 
 extern void forkret(void);
 static void freeproc(struct proc *p);
+
 
 extern char trampoline[]; // trampoline.S
 
@@ -55,6 +127,18 @@ procinit(void)
       p->kstack = KSTACK((int) (p - proc));
       p->nice = 10;
   }
+
+  for(int i = 0; i < NPROC; i++)
+  {
+    qtable[i].next = EMPTY;
+    qtable[i].prev = EMPTY;
+    qtable[i].pass = 0;
+  }
+
+  qtable[NPROC].prev = EMPTY; // intialize qtable head
+  qtable[NPROC].next = NPROC+1;
+  qtable[NPROC+1].prev = NPROC; // intialize qtable tail
+  qtable[NPROC+1].next = EMPTY;
 }
 
 // Must be called with interrupts disabled,
@@ -120,6 +204,8 @@ allocproc(void)
 found:
   p->pid = allocpid();
   p->state = USED;
+  p->nice = 10; //initializes nice value
+  p->runtime = 0; //initializes runtime 
 
   // Allocate a trapframe page.
   if((p->trapframe = (struct trapframe *)kalloc()) == 0){
@@ -165,6 +251,7 @@ freeproc(struct proc *p)
   p->killed = 0;
   p->xstate = 0;
   p->state = UNUSED;
+  p->nice = 10; // resets the nice value when the process is killed
 }
 
 // Create a user page table for a given process,
@@ -244,6 +331,8 @@ userinit(void)
   p->cwd = namei("/");
 
   p->state = RUNNABLE;
+  enqueue(p);
+  printf("enqueue 1\n");
 
   release(&p->lock);
 }
@@ -314,6 +403,8 @@ fork(void)
 
   acquire(&np->lock);
   np->state = RUNNABLE;
+  enqueue(np);
+  printf("enqueue 2\n");
   release(&np->lock);
 
   return pid;
@@ -465,6 +556,71 @@ scheduler(void)
   }
 }
 
+//Round-robin queue based scheduler
+void
+scheduler_rr(void)
+{
+  struct proc *p;
+  struct cpu *c = mycpu();
+  
+  c->proc = 0;
+  for(;;){
+    // Avoid deadlock by ensuring that devices can interrupt.
+    intr_on();
+    
+    int index = dequeue();
+    while(index != -1) {
+      p = &proc[index]; 
+      printf("SCHEDULERJKWHLEFSKDF: %d\n", p->pid);
+      acquire(&p->lock);
+      // Switch to chosen process.  It is the process's job
+      // to release its lock and then reacquire it
+      // before jumping back to us.
+      p->state = RUNNING;
+      c->proc = p;
+      swtch(&c->context, &p->context);
+
+      // Process is done running for now.
+      // It should have changed its p->state before coming back.
+      c->proc = 0;
+      release(&p->lock);
+      index = dequeue();
+    }
+  }
+}
+
+//Stride based scheduler
+void
+scheduler_stride(void)
+{
+  struct proc *p;
+  struct cpu *c = mycpu();
+  
+  c->proc = 0;
+  for(;;){
+    // Avoid deadlock by ensuring that devices can interrupt.
+    intr_on();
+
+    for(p = proc; p < &proc[NPROC]; p++) {
+      acquire(&p->lock);
+      if(p->state == RUNNABLE) {
+        // Switch to chosen process.  It is the process's job
+        // to release its lock and then reacquire it
+        // before jumping back to us.
+        dequeue(p);
+        p->state = RUNNING;
+        c->proc = p;
+        swtch(&c->context, &p->context);
+
+        // Process is done running for now.
+        // It should have changed its p->state before coming back.
+        c->proc = 0;
+      }
+      release(&p->lock);
+    }
+  }
+}
+
 // Switch to scheduler.  Must hold only p->lock
 // and have changed proc->state. Saves and restores
 // intena because intena is a property of this
@@ -492,6 +648,7 @@ sched(void)
   mycpu()->intena = intena;
 }
 
+
 // Give up the CPU for one scheduling round.
 void
 yield(void)
@@ -499,6 +656,9 @@ yield(void)
   struct proc *p = myproc();
   acquire(&p->lock);
   p->state = RUNNABLE;
+  enqueue(p);
+  printf("enqueue 3\n");
+  p->runtime = p->runtime + 1; //increment runtime each time process is interrupted by a timer 
   sched();
   release(&p->lock);
 }
@@ -567,6 +727,8 @@ wakeup(void *chan)
       acquire(&p->lock);
       if(p->state == SLEEPING && p->chan == chan) {
         p->state = RUNNABLE;
+        enqueue(p);
+        printf("enqueue 4\n");
       }
       release(&p->lock);
     }
@@ -588,6 +750,8 @@ kill(int pid)
       if(p->state == SLEEPING){
         // Wake process from sleep().
         p->state = RUNNABLE;
+        enqueue(p);
+        printf("enqueue 5\n");
       }
       release(&p->lock);
       return 0;
