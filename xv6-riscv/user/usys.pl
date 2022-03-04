@@ -39,4 +39,3 @@ entry("uptime");
 entry("pcount");
 entry("nice");
 entry("getpstat");
-entry("change_nice");

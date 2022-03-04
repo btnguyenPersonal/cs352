@@ -107,7 +107,6 @@ extern uint64 sys_uptime(void);
 extern uint64 sys_pcount(void);
 extern uint64 sys_nice(void); // defines nice system call
 extern uint64 sys_getpstat(void); // defines pstat system call
-extern uint64 sys_change_nice(void);
 
 static uint64 (*syscalls[])(void) = {
 [SYS_fork]    sys_fork,
@@ -134,7 +133,6 @@ static uint64 (*syscalls[])(void) = {
 [SYS_pcount]  sys_pcount,
 [SYS_nice]  sys_nice, // defines nice system call
 [SYS_getpstat]  sys_getpstat, // defines pstat system call
-[SYS_change_nice]  sys_change_nice,
 };
 
 void

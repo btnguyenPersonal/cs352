@@ -382,7 +382,7 @@ userinit(void)
     case 3:
       enqueue_sorted(p); 
       break;
-    default
+    default:
       enqueue(p);
       break;
   }
@@ -464,7 +464,7 @@ fork(void)
     case 3:
       enqueue_sorted(np); 
       break;
-    default
+    default:
       enqueue(np);
       break;
   }
@@ -732,7 +732,7 @@ yield(void)
     case 3:
       enqueue_sorted(p); 
       break;
-    default
+    default:
       enqueue(p);
       break;
   }
@@ -813,7 +813,8 @@ wakeup(void *chan)
           case 3:
             enqueue_sorted(p);
             break;
-          default enqueue(p);
+          default:
+            enqueue(p);
             break;
         }
         printf("enqueue 4\n");
@@ -845,7 +846,8 @@ kill(int pid)
           case 3:
             enqueue_sorted(p);
             break;
-          default enqueue(p);
+          default:
+            enqueue(p);
             break;
         }
         printf("enqueue 5\n");
