@@ -16,7 +16,6 @@ chnice(int n, char* proc, char* args[])
   exec(proc, args);
   return 0;
 }
-
 int
 main(int argc, char *argv[]) {
   // parameter check
