@@ -94,6 +94,9 @@ struct proc {
   int pid;                     // Process ID
   int nice;                    // Nice Value
   int runtime;                 // Runtime of the process, in ticks
+  int pass;                    // pass value
+  int stride;                  // stride value
+  // calc by: stride = 1000000 / tickets;
 
   // wait_lock must be held when using this:
   struct proc *parent;         // Parent process

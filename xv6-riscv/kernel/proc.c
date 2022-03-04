@@ -17,8 +17,20 @@ struct qentry {
     uint64 next; // index of next qentry in list 
 };
 
+static const int nice_to_tickets[40] = { 
+/* -20 */     88761,     71755,     56483,     46273,     36291, 
+/* -15 */     29154,     23254,     18705,     14949,     11916, 
+/* -10 */      9548,      7620,      6100,      4904,      3906, 
+/*  -5 */      3121,      2501,      1991,      1586,      1277, 
+/*   0 */      1024,       820,       655,       526,       423, 
+/*   5 */       335,       272,       215,       172,       137, 
+/*  10 */       110,        87,        70,        56,        45, 
+/*  15 */        36,        29,        23,        18,        15, 
+};
+
 // a fixed size table where the index of a process in proc[] is the same in qtable[] 
 struct qentry qtable[NPROC+2];
+
 
 void print_qtable() {
   struct qentry q = qtable[HEAD];
@@ -28,6 +40,38 @@ void print_qtable() {
     q = qtable[q.next];
   }
   printf("TAIL\n");
+}
+
+int enqueue_sorted(struct proc *p)
+{
+  int index = p - proc;
+  // checks if the process is already in the queue
+  if (qtable[index].prev != EMPTY && qtable[index].next != EMPTY) {
+    return -1;
+  }
+  printf("\nBEFORE:\n");
+  print_qtable();
+  struct qentry q;
+  q.pass = p->pass;
+  qtable[index] = q;
+  int qtable_index = -1;
+  for(struct qentry current = qtable[HEAD]; current.next != qtable[TAIL].next; qtable_index = current.next) {
+    current = qtable[current.next];
+    if (current.pass > p->pass) {
+      q.next = qtable_index;   // q.next = current
+      q.prev = current.prev;  // q.prev = current.prev
+      qtable[index] = q; // put this into queue
+      qtable[qtable_index].prev = index;
+      qtable[current.prev].next = index;
+      break;
+    }
+  }
+  // qtable[index] = q;  // insert q into qtable
+  // qtable[qtable[TAIL].prev].next = index;  // (tail.prev).next = q
+  // qtable[TAIL].prev = index;  // tail.prev = q
+  printf("\nAFTER:\n");
+  print_qtable();
+  return index;
 }
 
 int enqueue(struct proc *p)
@@ -330,7 +374,17 @@ userinit(void)
   p->cwd = namei("/");
 
   p->state = RUNNABLE;
-  enqueue(p);
+  switch (SCHEDULER) {
+    case 2:
+      enqueue(p); 
+      break;
+    case 3:
+      enqueue_sorted(p); 
+      break;
+    default
+      enqueue(p);
+      break;
+  }
   printf("enqueue 1\n");
 
   release(&p->lock);
@@ -402,7 +456,17 @@ fork(void)
 
   acquire(&np->lock);
   np->state = RUNNABLE;
-  enqueue(np);
+  switch (SCHEDULER) {
+    case 2:
+      enqueue(np); 
+      break;
+    case 3:
+      enqueue_sorted(np); 
+      break;
+    default
+      enqueue(np);
+      break;
+  }
   printf("enqueue 2\n");
   release(&np->lock);
 
@@ -593,6 +657,7 @@ void
 scheduler_stride(void)
 {
   struct proc *p;
+  struct proc *min = proc;
   struct cpu *c = mycpu();
   
   c->proc = 0;
@@ -600,23 +665,27 @@ scheduler_stride(void)
     // Avoid deadlock by ensuring that devices can interrupt.
     intr_on();
 
+    //loop through
     for(p = proc; p < &proc[NPROC]; p++) {
-      acquire(&p->lock);
-      if(p->state == RUNNABLE) {
-        // Switch to chosen process.  It is the process's job
-        // to release its lock and then reacquire it
-        // before jumping back to us.
-        dequeue(p);
-        p->state = RUNNING;
-        c->proc = p;
-        swtch(&c->context, &p->context);
-
-        // Process is done running for now.
-        // It should have changed its p->state before coming back.
-        c->proc = 0;
+      if (p->pass <= min->pass) {
+        min = p;
       }
-      release(&p->lock);
     }
+
+    acquire(&min->lock);
+    // Switch to chosen process.  It is the process's job
+    // to release its lock and then reacquire it
+    // before jumping back to us.
+    dequeue(min);
+    min->stride += 1000000 / (nice_to_tickets[min->nice]);
+    min->state = RUNNING;
+    c->proc = min;
+    swtch(&c->context, &min->context);
+
+    // Process is done running for now.
+    // It should have changed its p->state before coming back.
+    c->proc = 0;
+    release(&min->lock);
   }
 }
 
@@ -655,7 +724,17 @@ yield(void)
   struct proc *p = myproc();
   acquire(&p->lock);
   p->state = RUNNABLE;
-  enqueue(p);
+  switch (SCHEDULER) {
+    case 2:
+      enqueue(p); 
+      break;
+    case 3:
+      enqueue_sorted(p); 
+      break;
+    default
+      enqueue(p);
+      break;
+  }
   printf("enqueue 3\n");
   p->runtime = p->runtime + 1; //increment runtime each time process is interrupted by a timer 
   sched();
@@ -726,7 +805,16 @@ wakeup(void *chan)
       acquire(&p->lock);
       if(p->state == SLEEPING && p->chan == chan) {
         p->state = RUNNABLE;
-        enqueue(p);
+        switch (SCHEDULER) {
+          case 2:
+            enqueue(p);
+            break;
+          case 3:
+            enqueue_sorted(p);
+            break;
+          default enqueue(p);
+            break;
+        }
         printf("enqueue 4\n");
       }
       release(&p->lock);
@@ -749,7 +837,16 @@ kill(int pid)
       if(p->state == SLEEPING){
         // Wake process from sleep().
         p->state = RUNNABLE;
-        enqueue(p);
+        switch (SCHEDULER) {
+          case 2:
+            enqueue(p);
+            break;
+          case 3:
+            enqueue_sorted(p);
+            break;
+          default enqueue(p);
+            break;
+        }
         printf("enqueue 5\n");
       }
       release(&p->lock);
