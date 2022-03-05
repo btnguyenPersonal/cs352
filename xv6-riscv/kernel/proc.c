@@ -42,37 +42,15 @@ void print_qtable() {
   printf("TAIL\n");
 }
 
-int enqueue_sorted(struct proc *p)
+int peek() //returns index of first element in the queue
 {
-  int index = p - proc;
-  // checks if the process is already in the queue
-  if (qtable[index].prev != EMPTY && qtable[index].next != EMPTY) {
+  if (qtable[HEAD].next == TAIL ){
     return -1;
   }
-  printf("\nBEFORE:\n");
-  print_qtable();
-  struct qentry q;
-  q.pass = p->pass;
-  qtable[index] = q;
-  int qtable_index = -1;
-  for(struct qentry current = qtable[HEAD]; current.next != qtable[TAIL].next; qtable_index = current.next) {
-    current = qtable[current.next];
-    if (current.pass > p->pass) {
-      q.next = qtable_index;   // q.next = current
-      q.prev = current.prev;  // q.prev = current.prev
-      qtable[index] = q; // put this into queue
-      qtable[qtable_index].prev = index;
-      qtable[current.prev].next = index;
-      break;
-    }
-  }
-  // qtable[index] = q;  // insert q into qtable
-  // qtable[qtable[TAIL].prev].next = index;  // (tail.prev).next = q
-  // qtable[TAIL].prev = index;  // tail.prev = q
-  printf("\nAFTER:\n");
-  print_qtable();
-  return index;
-}
+
+  struct proc *p = &proc[qtable[HEAD].next];
+  return p - proc;
+} 
 
 int enqueue(struct proc *p)
 {
@@ -90,6 +68,47 @@ int enqueue(struct proc *p)
   qtable[index] = q;  // insert q into qtable
   qtable[qtable[TAIL].prev].next = index;  // (tail.prev).next = q
   qtable[TAIL].prev = index;  // tail.prev = q
+  printf("\nAFTER:\n");
+  print_qtable();
+  return index;
+}
+
+int enqueue_sorted(struct proc *p)
+{
+  int index = p - proc;
+  // checks if the process is already in the queue
+  if (qtable[index].prev != EMPTY && qtable[index].next != EMPTY) {
+    return -1;
+  }
+  printf("\nBEFORE:\n");
+  print_qtable();
+  struct qentry q;
+  q.pass = p->pass;
+  qtable[index] = q;
+  int qtable_index = -1;
+  int is_set = 0;
+  for(struct qentry current = qtable[HEAD]; current.next != qtable[TAIL].next; qtable_index = current.next) {
+    current = qtable[current.next];
+    if (current.pass > p->pass && is_set == 0) {
+      q.next = qtable_index;   // q.next = current
+      q.prev = current.prev;  // q.prev = current.prev
+      qtable[index] = q; // put this into queue
+      qtable[qtable_index].prev = index;
+      qtable[current.prev].next = index;
+      is_set++;
+    }
+  }
+  if(is_set == 0)
+  {
+    q.next = TAIL;   // q.next = Tail
+    q.prev = qtable[TAIL].prev;  // q.prev = Tail.prev
+    qtable[index] = q;  // insert q into qtable
+    qtable[qtable[TAIL].prev].next = index;  // (tail.prev).next = q
+    qtable[TAIL].prev = index;  // tail.prev = q
+  }
+  // qtable[index] = q;  // insert q into qtable
+  // qtable[qtable[TAIL].prev].next = index;  // (tail.prev).next = q
+  // qtable[TAIL].prev = index;  // tail.prev = q
   printf("\nAFTER:\n");
   print_qtable();
   return index;
@@ -170,6 +189,7 @@ procinit(void)
       initlock(&p->lock, "proc");
       p->kstack = KSTACK((int) (p - proc));
       p->nice = 10;
+      p->stride = 1000000 / nice_to_tickets[p->nice];
   }
 
   for(int i = 0; i < NPROC; i++)
@@ -249,6 +269,8 @@ found:
   p->pid = allocpid();
   p->state = USED;
   p->nice = 10; //initializes nice value
+  p->stride = 1000000 / nice_to_tickets[p->nice];
+  p->pass = proc[peek()].pass + p->stride;
   p->runtime = 0; //initializes runtime 
 
   // Allocate a trapframe page.
@@ -296,6 +318,7 @@ freeproc(struct proc *p)
   p->xstate = 0;
   p->state = UNUSED;
   p->nice = 10; // resets the nice value when the process is killed
+  p->stride = 1000000 / nice_to_tickets[p->nice];
 }
 
 // Create a user page table for a given process,
@@ -635,7 +658,7 @@ scheduler_rr(void)
     int index = dequeue();
     while(index != -1) {
       p = &proc[index]; 
-      printf("SCHEDULERJKWHLEFSKDF: %d\n", p->pid);
+      //printf("SCHEDULERJKWHLEFSKDF: %d\n", p->pid);
       acquire(&p->lock);
       // Switch to chosen process.  It is the process's job
       // to release its lock and then reacquire it
@@ -658,35 +681,32 @@ void
 scheduler_stride(void)
 {
   struct proc *p;
-  struct proc *min = proc;
   struct cpu *c = mycpu();
   
   c->proc = 0;
   for(;;){
     // Avoid deadlock by ensuring that devices can interrupt.
     intr_on();
+    
+    int index = dequeue();
+    while(index != -1) {
+      p = &proc[index]; 
+      //printf("SCHEDULERJKWHLEFSKDF: %d\n", p->pid);
+      acquire(&p->lock);
+      // Switch to chosen process.  It is the process's job
+      // to release its lock and then reacquire it
+      // before jumping back to us.
+      p->state = RUNNING;
+      c->proc = p;
+      swtch(&c->context, &p->context);
 
-    //loop through
-    for(p = proc; p < &proc[NPROC]; p++) {
-      if (p->pass <= min->pass) {
-        min = p;
-      }
+      // Process is done running for now.
+      // It should have changed its p->state before coming back.
+      c->proc = 0;
+      p->pass += p->stride;
+      release(&p->lock);
+      index = dequeue();
     }
-
-    acquire(&min->lock);
-    // Switch to chosen process.  It is the process's job
-    // to release its lock and then reacquire it
-    // before jumping back to us.
-    dequeue(min);
-    min->stride += 1000000 / (nice_to_tickets[min->nice]);
-    min->state = RUNNING;
-    c->proc = min;
-    swtch(&c->context, &min->context);
-
-    // Process is done running for now.
-    // It should have changed its p->state before coming back.
-    c->proc = 0;
-    release(&min->lock);
   }
 }
 
