@@ -59,8 +59,8 @@ int enqueue(struct proc *p)
   if (qtable[index].prev != EMPTY && qtable[index].next != EMPTY) {
     return -1;
   }
-  printf("\nBEFORE:\n");
-  print_qtable();
+  //printf("\nBEFORE:\n");
+  //print_qtable();
   struct qentry q;
   q.pass = 0;
   q.next = TAIL;   // q.next = Tail
@@ -68,8 +68,8 @@ int enqueue(struct proc *p)
   qtable[index] = q;  // insert q into qtable
   qtable[qtable[TAIL].prev].next = index;  // (tail.prev).next = q
   qtable[TAIL].prev = index;  // tail.prev = q
-  printf("\nAFTER:\n");
-  print_qtable();
+  printf("Enqueue: %d\n", index);
+  //print_qtable();
   return index;
 }
 
@@ -80,8 +80,8 @@ int enqueue_sorted(struct proc *p)
   if (qtable[index].prev != EMPTY && qtable[index].next != EMPTY) {
     return -1;
   }
-  printf("\nBEFORE:\n");
-  print_qtable();
+  //printf("\nBEFORE:\n");
+  //print_qtable();
   struct qentry q;
   q.pass = p->pass;
   qtable[index] = q;
@@ -109,8 +109,9 @@ int enqueue_sorted(struct proc *p)
   // qtable[index] = q;  // insert q into qtable
   // qtable[qtable[TAIL].prev].next = index;  // (tail.prev).next = q
   // qtable[TAIL].prev = index;  // tail.prev = q
-  printf("\nAFTER:\n");
-  print_qtable();
+  //printf("\nAFTER:\n");
+  //print_qtable();
+  printf("Enqueue: %d\n", index);
   return index;
 }
 
@@ -133,9 +134,9 @@ int dequeue()
   qtable[q.next].prev = HEAD;  // (2nd_in_queue).prev = head
   qtable[HEAD].next = q.next;  // head.next = (2nd_in_queue)
 
-  printf("\nDEQUEUE AFTER:\n");
-  print_qtable();
-  printf("\nPID: %d\n", p->pid);
+  //printf("\nDEQUEUE AFTER:\n");
+  //print_qtable();
+  printf("Dequeue: %d\n", p - proc);
   return p - proc;
 }
 
@@ -409,7 +410,7 @@ userinit(void)
       enqueue(p);
       break;
   }
-  printf("enqueue 1\n");
+  //printf("enqueue 1\n");
 
   release(&p->lock);
 }
@@ -491,7 +492,7 @@ fork(void)
       enqueue(np);
       break;
   }
-  printf("enqueue 2\n");
+  //printf("enqueue 2\n");
   release(&np->lock);
 
   return pid;
@@ -756,7 +757,7 @@ yield(void)
       enqueue(p);
       break;
   }
-  printf("enqueue 3\n");
+  //printf("enqueue 3\n");
   p->runtime = p->runtime + 1; //increment runtime each time process is interrupted by a timer 
   sched();
   release(&p->lock);
@@ -837,7 +838,7 @@ wakeup(void *chan)
             enqueue(p);
             break;
         }
-        printf("enqueue 4\n");
+        //printf("enqueue 4\n");
       }
       release(&p->lock);
     }
@@ -870,7 +871,7 @@ kill(int pid)
             enqueue(p);
             break;
         }
-        printf("enqueue 5\n");
+        //printf("enqueue 5\n");
       }
       release(&p->lock);
       return 0;
