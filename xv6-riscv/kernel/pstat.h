@@ -11,7 +11,10 @@ struct pstat {
   int inuse[NPROC]; // whether this slot of the process table is in use (1 or 0) 
   int pid[NPROC];   // the PID of each process 
   int nice[NPROC]; // the nice value of the process 
-  // More will be added in Project 1C... 
+  
+  int pass[NPROC];  // the pass value of the process
+  int runtime[NPROC]; // the amount of times the process has run on the cpu
+  int stride[NPROC]; // the stride value of the process
 }; 
  
 #endif // _PSTAT_H_ 
