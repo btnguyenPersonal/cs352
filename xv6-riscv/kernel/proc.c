@@ -22,13 +22,15 @@ struct qentry qtable[NPROC+2];
 
 //prints out the queue
 void print_qtable() {
-  struct qentry q = qtable[HEAD];
-  printf("HEAD\n");
-  while (q.next != TAIL) {
-    printf("%d\n", q.next);
-    q = qtable[q.next];
+  if (DEBUG) {
+    struct qentry q = qtable[HEAD];
+    printf("HEAD\n");
+    while (q.next != TAIL) {
+      printf("%d\n", q.next);
+      q = qtable[q.next];
+    }
+    printf("TAIL\n");
   }
-  printf("TAIL\n");
 }
 
 //returns index of first element in the queue
@@ -58,7 +60,7 @@ int enqueue(struct proc *p)
   qtable[qtable[TAIL].prev].next = index;  // (tail.prev).next = q
   qtable[TAIL].prev = index;  // tail.prev = q
 
-  printf("Enqueue: %d\n", index);
+  if (DEBUG) {printf("Enqueue: %d\n", index);}
   print_qtable();
   return index;
 }
@@ -97,7 +99,7 @@ int enqueue_sorted(struct proc *p)
   }
 
   print_qtable();
-  printf("Enqueue: %d\n", index);
+  if (DEBUG) {printf("Enqueue: %d\n", index);}
   print_qtable();
   return index;
 }
@@ -121,7 +123,7 @@ int dequeue()
   qtable[q.next].prev = HEAD;  // (2nd_in_queue).prev = head
   qtable[HEAD].next = q.next;  // head.next = (2nd_in_queue)
 
-  printf("Dequeue: %d\n", p - proc);
+  if (DEBUG) {printf("Dequeue: %d\n", p - proc);}
   return p - proc;
 }
 
@@ -174,8 +176,9 @@ procinit(void)
   for(p = proc; p < &proc[NPROC]; p++) {
       initlock(&p->lock, "proc");
       p->kstack = KSTACK((int) (p - proc));
+      p->runtime = 0;
       p->nice = 10; //initalizes nice value
-      p->stride = 1000000 / nice_to_tickets[p->nice]; //initalizes stride value
+      p->stride = 1000000 / nice_to_tickets[p->nice + 20]; //initalizes stride value
       p->pass = 0;
   }
 
@@ -308,7 +311,7 @@ freeproc(struct proc *p)
   p->xstate = 0;
   p->state = UNUSED;
   p->nice = 10; // resets the nice value when the process is killed
-  p->stride = 1000000 / nice_to_tickets[p->nice]; //resets processes stride value
+  p->stride = 1000000 / nice_to_tickets[p->nice + 20]; //resets processes stride value
 }
 
 // Create a user page table for a given process,
@@ -388,7 +391,7 @@ userinit(void)
   p->cwd = namei("/");
 
   p->state = RUNNABLE;
-  printf("enqueue: userinit\n");
+  if (DEBUG) {printf("enqueue: userinit\n");}
   //enqueues process since it is now runnable
   switch (SCHEDULER) {
     case 2:
@@ -471,7 +474,7 @@ fork(void)
 
   acquire(&np->lock);
   np->state = RUNNABLE;
-  printf("enqueue: fork\n");
+  if (DEBUG) {printf("enqueue: fork\n");}
   //enqueues process since it is now runnable
   switch (SCHEDULER) {
     case 2:
@@ -739,7 +742,8 @@ yield(void)
   struct proc *p = myproc();
   acquire(&p->lock);
   p->state = RUNNABLE;
-  printf("enqueue: yield\n");
+  if (DEBUG) {printf("enqueue: yield\n");}
+  myproc()->runtime += 1; //increment runtime each time process is interrupted by a timer 
   //enqueues process since it is now runnable
   switch (SCHEDULER) {
     case 2:
@@ -752,7 +756,6 @@ yield(void)
       enqueue(p);
       break;
   }
-  p->runtime = p->runtime + 1; //increment runtime each time process is interrupted by a timer 
   sched();
   release(&p->lock);
 }
@@ -820,7 +823,7 @@ wakeup(void *chan)
       acquire(&p->lock);
       if(p->state == SLEEPING && p->chan == chan) {
         p->state = RUNNABLE;
-        printf("enqueue: wakeup\n");
+        if (DEBUG) {printf("enqueue: wakeup\n");}
         //enqueues process since it is now runnable
         switch (SCHEDULER) {
           case 2:
@@ -854,7 +857,7 @@ kill(int pid)
       if(p->state == SLEEPING){
         // Wake process from sleep().
         p->state = RUNNABLE;
-        printf("enqueue: kill\n");
+        if (DEBUG) {printf("enqueue: kill\n");}
         //enqueues process since it is now runnable
         switch (SCHEDULER) {
           case 2:

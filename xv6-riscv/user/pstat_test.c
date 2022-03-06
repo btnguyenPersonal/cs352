@@ -12,7 +12,7 @@ main(int argc, char *argv[]) {
   // prints out all of the process stats for each process
   for(int i = 0; i < NPROC; i++)
   {
-    printf("#%d\npid: %d  inuse: %d  nice value: %d\n", i, stats.pid[i], stats.inuse[i], stats.nice[i]);
+    printf("#%d\npid: %d  inuse: %d  nice value: %d  runtime: %d  pass value: %d  stride value: %d\n", i, stats.pid[i], stats.inuse[i], stats.nice[i], stats.runtime[i], stats.pass[i], stats.stride[i]);
   }  
 
   exit(0);
