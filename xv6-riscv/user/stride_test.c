@@ -5,9 +5,9 @@
 
 int
 main(int argc, char *argv[]) {
-    if (fork() == 0) {
-        if (fork() == 0) { //in parent 
-            //sleep(5);
+    if (fork() > 0) {
+        if (fork() > 0) { //in parent 
+            sleep(5);
             struct pstat stats;
             getpstat(&stats);
             for(int i = 0; i < NPROC; i++)
