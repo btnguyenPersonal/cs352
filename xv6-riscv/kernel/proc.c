@@ -701,6 +701,7 @@ scheduler_stride(void)
       // It should have changed its p->state before coming back.
       c->proc = 0;
       p->pass += p->stride; // updates processes pass value after running on cpu 
+      //printf("\nstride: %d , pass: %d\n", p->stride, p->pass);
       release(&p->lock);
       }
     }

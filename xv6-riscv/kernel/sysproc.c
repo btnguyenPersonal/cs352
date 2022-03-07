@@ -120,7 +120,7 @@ sys_nice(void)
   // sets process's nice value to n
   myproc()->nice = n;
   // sets new stride value
-  myproc()->stride = 1000000 / nice_to_tickets[n];
+  myproc()->stride = 1000000 / nice_to_tickets[n + 20];
   printf("nice value set: %d\n", n);
   //printf("Stride in nice: %d\n", myproc()->stride);
   return n;
