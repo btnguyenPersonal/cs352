@@ -3,16 +3,18 @@ Names:
   Dylan Hampton dhampton@iastate.edu  
 
 Brief Description:
-  In this project, we have added nice values to processes, and the ability for users to change the nice values for their processes that they are running.
-  We have also made a pstat struct that stores the pid, inuse, and nice values of all processes on the system.
-  The pstat_test command will print out all of the values for the current processes.
-  The nice system call can be used to change the nice value for the calling process.
-  The get_pstat system call returns the pstat struct for all processes.
+  In this project, we have added a runtime, stride, and pass value for each process. In addition, 
+  we have implemented an improved Round-Robin scheduler which uses a standard FIFO queue as well as a stride based scheduler
+  that uses a linked list that is sorted based on a processes pass value. 
+
+Testing:
+  We attempted to create a stride_test which would print the pstat in order to
+  check the pass values of 2 children of differing nice values which had an infinite loop.
+  However, due to an unknown bug, we were unable to get the results of the test because
+  of a kerneltrap error. 
 
 List of added files:
-  user/nice.c
-  user/pstat_test.c
-  kernel/pstat.h
+  stride_test.c
 
 xv6 is a re-implementation of Dennis Ritchie's and Ken Thompson's Unix
 Version 6 (v6).  xv6 loosely follows the structure and style of v6,
