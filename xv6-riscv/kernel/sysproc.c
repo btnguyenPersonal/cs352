@@ -114,16 +114,17 @@ sys_pcount(void)
   uint64
 sys_nice(void)
 {
-  int n;
-  if(argint(0, &n) < 0)
+  int niceValue;
+  if(argint(0, &niceValue) < 0) {
     return -1;
-  // sets process's nice value to n
-  myproc()->nice = n;
-  // sets new stride value
-  myproc()->stride = 1000000 / nice_to_tickets[n + 20];
-  printf("nice value set: %d\n", n);
-  //printf("Stride in nice: %d\n", myproc()->stride);
-  return n;
+  }
+  if (niceValue < -20 || niceValue > 19) {
+    niceValue = 10;
+  }
+  printf("nice value set: %d\n", niceValue);
+  myproc()->stride = 1000000 / nice_to_tickets[niceValue + 20];
+  myproc()->nice = niceValue;
+  return 0;
 }
 
 // tests the pstat file

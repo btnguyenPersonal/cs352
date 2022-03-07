@@ -744,7 +744,7 @@ yield(void)
   acquire(&p->lock);
   p->state = RUNNABLE;
   if (DEBUG) {printf("enqueue: yield\n");}
-  myproc()->runtime += 1; //increment runtime each time process is interrupted by a timer 
+  myproc()->runtime++; //increment runtime each time process is interrupted by a timer 
   //enqueues process since it is now runnable
   switch (SCHEDULER) {
     case 2:
